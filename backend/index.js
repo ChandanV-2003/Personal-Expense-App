@@ -23,13 +23,6 @@ app.use(morgan("dev"));
 
 app.post("/api/users/send-otp", userController.sendOtp);
 app.post("/api/users/verify-otp", userController.verifyOtp);
-
-app.get("/api/test", authMiddleware, (req, res) => {
-  res.json({
-    message: "Protected route working",
-    userId: req.userId,
-  });
-});
 app.put("/api/users/monthly-limit", authMiddleware, userController.updateMonthlyLimit);
 app.get("/api/dashboard", authMiddleware, expenseController.getDashboard);
 
@@ -44,8 +37,6 @@ app.post("/api/expenses", authMiddleware, uploadOld.single("bill"), expenseContr
 app.get("/api/expenses", authMiddleware, expenseController.getExpenses);
 app.delete("/api/expenses/:id", authMiddleware, expenseController.deleteExpense);
 app.put("/api/expenses/:id", authMiddleware, expenseController.updateExpense);
-
-app.get("/api/analytics/categories", authMiddleware, expenseController.getCategoryAnalytics);
 
 /* =========================
    AI BILL SCAN ROUTES
