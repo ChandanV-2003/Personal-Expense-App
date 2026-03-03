@@ -1,0 +1,36 @@
+/* ============================================
+   EXPENSE TRACKER - CLEAN DESIGN SYSTEM
+============================================ */
+
+@import './styles/variables.css';
+@import './styles/base.css';
+@import './styles/components.css';
+@import './styles/layout.css';
+
+/* Toast Notifications */
+.Toastify__toast-container {
+  font-family: 'Inter', sans-serif;
+  z-index: 2000;
+}
+
+.Toastify__toast {
+  background: var(--card);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  box-shadow: var(--shadow);
+}
+
+.Toastify__toast--success {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.Toastify__toast--error {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.Toastify__progress-bar {
+  background: var(--primary);
+  height: 2px;
+}

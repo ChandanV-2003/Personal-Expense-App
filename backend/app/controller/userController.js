@@ -1,0 +1,147 @@
+const User = require("../model/user");
+const transporter = require("../../config/mailer");
+const jwt = require("jsonwebtoken");
+
+/* =========================
+   Generate 6 Digit OTP
+========================= */
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/* =========================
+   SEND OTP
+========================= */
+exports.sendOtp = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      user = new User({
+        name: name?.trim() || "User",
+        email: normalizedEmail,
+      });
+    }
+
+    const otp = generateOTP();
+
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+    await user.save();
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: normalizedEmail,
+      subject: "Expense App - OTP Verification",
+      html: `
+        <h2>Your OTP Code</h2>
+        <p>Your OTP is: <b>${otp}</b></p>
+        <p>This OTP will expire in 5 minutes.</p>
+      `,
+    });
+
+    res.json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("SEND OTP ERROR:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+/* =========================
+   VERIFY OTP
+========================= */
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        message: "Email and OTP are required",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    if (!user.otp || user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (!user.otpExpiry || Date.now() > user.otpExpiry) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        monthlyLimit: user.monthlyLimit,
+      },
+    });
+  } catch (error) {
+    console.error("VERIFY OTP ERROR:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+/* =========================
+   UPDATE MONTHLY LIMIT
+========================= */
+exports.updateMonthlyLimit = async (req, res) => {
+  try {
+    const { monthlyLimit } = req.body;
+
+    const numericLimit = Number(monthlyLimit);
+
+    if (isNaN(numericLimit) || numericLimit < 0) {
+      return res.status(400).json({
+        message: "Monthly limit must be a positive number",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { monthlyLimit: numericLimit },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      message: "Monthly limit updated",
+      monthlyLimit: user.monthlyLimit,
+    });
+  } catch (error) {
+    console.error("UPDATE LIMIT ERROR:", error);
+    res.status(500).json({ message: "Failed to update monthly limit" });
+  }
+};
