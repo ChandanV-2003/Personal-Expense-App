@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { deleteExpense } from "../slices/expenseSlice";
+import { deleteExpense, fetchDashboard } from "../slices/expenseSlice";
 import { toast } from "react-toastify";
 import EditModal from "./EditModal";
 import ConfirmDialog from "./ConfirmDialog";
@@ -48,6 +48,7 @@ const ExpenseList = () => {
         .unwrap()
         .then(() => {
           toast.success("Expense deleted successfully");
+          dispatch(fetchDashboard());
         })
         .catch((error) => {
           toast.error(error.message || "Failed to delete expense");

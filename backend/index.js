@@ -26,14 +26,8 @@ app.post("/api/users/verify-otp", userController.verifyOtp);
 app.put("/api/users/monthly-limit", authMiddleware, userController.updateMonthlyLimit);
 app.get("/api/dashboard", authMiddleware, expenseController.getDashboard);
 
-
-
-
 // expense endpoint accepts optional bill file
-const multerOld = require("multer");
-const uploadOld = multerOld({ dest: "uploads/" });
-
-app.post("/api/expenses", authMiddleware, uploadOld.single("bill"), expenseController.addExpense);
+app.post("/api/expenses", authMiddleware, upload.single("bill"), handleMulterError, expenseController.addExpense);
 app.get("/api/expenses", authMiddleware, expenseController.getExpenses);
 app.delete("/api/expenses/:id", authMiddleware, expenseController.deleteExpense);
 app.put("/api/expenses/:id", authMiddleware, expenseController.updateExpense);

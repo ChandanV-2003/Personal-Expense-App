@@ -5,75 +5,15 @@ const mongoose = require("mongoose");
 /* =========================
    ADD EXPENSE
 ========================= */
-const cloudinary = require("cloudinary").v2;
-const fs = require("fs");
-const path = require("path");
-
-// configure cloudinary with env vars
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const axios = require("axios");
-
-// simple AI extraction (if Deepseek is available)
-async function extractBillData(fileUrl) {
-  // if no endpoint configured, skip AI extraction
-  if (!process.env.DEEPSEEK_ENDPOINT) {
-    return {};
-  }
-
-  try {
-    // NOTE: Deepseek API may need a different payload structure
-    // adjust according to your API documentation
-    const res = await axios.post(
-      process.env.DEEPSEEK_ENDPOINT,
-      {
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "user",
-            content: `Extract the following from this bill image and return JSON: date, amount, category, description. Image URL: ${fileUrl}`,
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        },
-      }
-    );
-    // parse response - adjust based on API response structure
-    if (res.data?.choices?.[0]?.message?.content) {
-      try {
-        return JSON.parse(res.data.choices[0].message.content);
-      } catch {
-        return {};
-      }
-    }
-    return {};
-  } catch (e) {
-    console.warn("AI extraction skipped:", e.message);
-    return {};
-  }
-}
+const cloudinary = require('../../config/cloudinary');
+const { processBillImage } = require('../../services/aiBillParser');
 
 exports.addExpense = async (req, res) => {
   try {
-    console.log("🔵 [ADD EXPENSE] Received request");
-    console.log("   userId:", req.userId);
-    console.log("   body:", req.body);
-    console.log("   file:", req.file ? `${req.file.filename} (size: ${req.file.size})` : "none");
-
     const { date, description, amount, category } = req.body;
     const numericAmount = Number(amount);
 
-    console.log("   parsed amount:", numericAmount);
-
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      console.error("   ❌ Invalid amount:", amount);
       return res.status(400).json({ message: "Valid amount is required" });
     }
 
@@ -85,30 +25,33 @@ exports.addExpense = async (req, res) => {
       date: date ? new Date(date) : new Date(),
     };
 
-    console.log("   📝 expenseData before save:", expenseData);
-
     // handle file upload to cloudinary if provided
     if (req.file) {
       try {
-        console.log("   📸 Uploading file to Cloudinary...");
-        const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-          folder: "bills",
-          resource_type: "auto",
+        // Step 1: Upload to Cloudinary using upload_stream (for memory buffer)
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "bills" },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          stream.end(req.file.buffer);
         });
+
+        expenseData.billImage = uploadResult.secure_url;
         expenseData.billUrl = uploadResult.secure_url;
-        console.log("   ✅ File uploaded:", expenseData.billUrl);
 
-        // clean up temp file
-        await fs.promises.unlink(req.file.path).catch(() => {});
-
-        // call AI to extract additional info from bill
-        const extracted = await extractBillData(expenseData.billUrl);
-        if (extracted && Object.keys(extracted).length > 0) {
-          console.log("   🤖 AI extraction result:", extracted);
+        // Step 2: call AI to extract/refine additional info from bill
+        const extracted = await processBillImage(req.file.buffer);
+        if (extracted) {
           if (extracted.date) expenseData.date = new Date(extracted.date);
           if (extracted.amount) expenseData.amount = Number(extracted.amount);
-          if (extracted.category) expenseData.category = extracted.category.trim();
-          if (extracted.description) expenseData.description = extracted.description.trim();
+          if (extracted.category) expenseData.category = extracted.category;
+          if (extracted.description && !expenseData.description) {
+            expenseData.description = extracted.description;
+          }
         }
       } catch (uploadErr) {
         console.error("   ⚠️  File upload/extraction error:", uploadErr.message);
@@ -116,14 +59,10 @@ exports.addExpense = async (req, res) => {
       }
     }
 
-    console.log("   💾 Saving to database...");
     const expense = await Expense.create(expenseData);
-    console.log("   ✅ Expense created:", expense._id);
-
     res.status(201).json(expense);
   } catch (error) {
     console.error("❌ ADD EXPENSE ERROR:", error.message);
-    console.error("   Stack:", error.stack);
     res.status(500).json({ message: error.message || "Failed to add expense" });
   }
 };

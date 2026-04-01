@@ -16,6 +16,7 @@ function App() {
           </PrivateRoute>
         }
       />
+      <Route path="*" element={<OtpAuth />} />
     </Routes>
   );
 }

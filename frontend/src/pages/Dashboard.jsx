@@ -63,9 +63,8 @@ const SetLimitForm = ({ limitInput, setLimitInput, dispatch, updateMonthlyLimit,
 
 const Dashboard = () => {
   const dispatch = useDispatch();
-  const { totalPages, loading, error, expenses, monthlyLimit, totalSpent, remaining } = useSelector((state) => state.expense);
+  const { loading, error, expenses, monthlyLimit, totalSpent, remaining } = useSelector((state) => state.expense);
 
-  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [search, setSearch] = useState("");
   const [categoryTerm, setCategoryTerm] = useState("");
@@ -77,8 +76,8 @@ const Dashboard = () => {
   }, [monthlyLimit]);
 
   useEffect(() => {
-    dispatch(fetchExpenses({ page, search, category }));
-  }, [dispatch, page, search, category]);
+    dispatch(fetchExpenses({ search, category }));
+  }, [dispatch, search, category]);
 
   useEffect(() => {
     dispatch(fetchDashboard());
@@ -94,13 +93,9 @@ const Dashboard = () => {
     return () => clearTimeout(id);
   }, [categoryTerm]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, category]);
+  // No need for setPage(1) anymore as pagination is removed
 
-  useEffect(() => {
-    dispatch(fetchDashboard());
-  }, [dispatch, expenses]);
+  // fetchDashboard is called on mount, and child components handle re-fetching after actions
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -136,7 +131,9 @@ const Dashboard = () => {
           {/* Error Display */}
           {error && (
             <Card className="mb-md">
-              <p style={{ color: 'var(--danger)', margin: 0 }}>{error}</p>
+              <p style={{ color: 'var(--danger)', margin: 0 }}>
+                {typeof error === 'string' ? error : 'An error occurred'}
+              </p>
             </Card>
           )}
 
@@ -196,20 +193,6 @@ const Dashboard = () => {
                     <ExpenseList />
                   </Card>
 
-                  {/* Pagination */}
-                  {totalPages > 1 && (
-                    <div className="pagination">
-                      {[...Array(totalPages)].map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setPage(i + 1)}
-                          className={`btn btn-ghost btn-sm ${page === i + 1 ? 'active' : ''}`}
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </>
               )}
 

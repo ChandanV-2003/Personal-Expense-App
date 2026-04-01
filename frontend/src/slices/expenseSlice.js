@@ -17,15 +17,8 @@ export const fetchExpenses = createAsyncThunk(
 export const createExpense = createAsyncThunk(
   "expense/createExpense",
   async (expense) => {
-    // FormData: DON'T set Content-Type manually - let axios set it with boundary
-    // JSON: use default axios behavior
-    if (expense instanceof FormData) {
-      const { data } = await axiosInstance.post("/expenses", expense);
-      return data;
-    } else {
-      const { data } = await axiosInstance.post("/expenses", expense);
-      return data;
-    }
+    const { data } = await axiosInstance.post("/expenses", expense);
+    return data;
   }
 );
 
@@ -72,7 +65,6 @@ const expenseSlice = createSlice({
   name: "expense",
   initialState: {
     expenses: [],
-    totalPages: 1,
     loading: false,
     error: null,
     // dashboard info
@@ -93,10 +85,8 @@ const expenseSlice = createSlice({
         // handle payload which might be an array or object
         if (Array.isArray(action.payload)) {
           state.expenses = action.payload;
-          state.totalPages = 1;
         } else {
           state.expenses = action.payload.expenses || [];
-          state.totalPages = action.payload.totalPages || 1;
         }
         state.error = null;
       })
