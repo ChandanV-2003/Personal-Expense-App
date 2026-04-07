@@ -49,11 +49,16 @@ exports.sendOtp = async (req, res) => {
       `,
     });
 
+    console.log(`✅ [OTP] Successfully sent to: ${normalizedEmail}`);
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
-    console.error("Send OTP Error:", error);
+    console.error("❌ Send OTP Error Detail:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     res.status(500).json({ 
-      message: "Something went wrong", 
+      message: "Failed to send OTP. Please check server logs for details.", 
       error: error.message 
     });
   }

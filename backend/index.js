@@ -25,6 +25,21 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 
+// Health Check & Debug Route (only for non-production ideally, but for now helpful)
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    port: process.env.PORT,
+    // Add non-sensitive env checks
+    env_loaded: {
+      EMAIL: !!process.env.EMAIL_USER,
+      MONGO: !!process.env.MONGO_URI,
+      FRONTEND: !!process.env.FRONTEND_URL
+    }
+  });
+});
+
 /* =========================
    USER ROUTES (No router file)
 ========================= */
