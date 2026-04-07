@@ -51,7 +51,6 @@ exports.sendOtp = async (req, res) => {
 
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
-    console.error("SEND OTP ERROR:", error);
     res.status(500).json({ message: "Something went wrong" });
   }
 };
@@ -106,7 +105,6 @@ exports.verifyOtp = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("VERIFY OTP ERROR:", error);
     res.status(500).json({ message: "Something went wrong" });
   }
 };
@@ -141,7 +139,6 @@ exports.updateMonthlyLimit = async (req, res) => {
       monthlyLimit: user.monthlyLimit,
     });
   } catch (error) {
-    console.error("UPDATE LIMIT ERROR:", error);
     res.status(500).json({ message: "Failed to update monthly limit" });
   }
-};
+};

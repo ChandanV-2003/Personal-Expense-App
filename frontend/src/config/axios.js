@@ -2,7 +2,7 @@ import axios from "axios";
 import { store } from "../store";
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://personal-expense-app-backend.onrender.com/api",
 });
 
 axiosInstance.interceptors.request.use((config) => {

@@ -93,16 +93,12 @@ const Dashboard = () => {
     return () => clearTimeout(id);
   }, [categoryTerm]);
 
-  // No need for setPage(1) anymore as pagination is removed
-
-  // fetchDashboard is called on mount, and child components handle re-fetching after actions
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   return (
@@ -114,15 +110,15 @@ const Dashboard = () => {
           <section className="section">
             <div className="summary-grid">
               <div className="summary-card">
-                <div className="summary-value">{formatCurrency(monthlyLimit)}</div>
+                <div className="summary-value" style={{ color: 'var(--primary)' }}>{formatCurrency(monthlyLimit)}</div>
                 <div className="summary-label">Monthly Limit</div>
               </div>
               <div className="summary-card">
-                <div className="summary-value">{formatCurrency(totalSpent)}</div>
+                <div className="summary-value" style={{ color: 'var(--accent)' }}>{formatCurrency(totalSpent)}</div>
                 <div className="summary-label">Total Used</div>
               </div>
               <div className="summary-card">
-                <div className="summary-value">{formatCurrency(remaining)}</div>
+                <div className="summary-value" style={{ color: 'var(--success)' }}>{formatCurrency(remaining)}</div>
                 <div className="summary-label">Remaining</div>
               </div>
             </div>

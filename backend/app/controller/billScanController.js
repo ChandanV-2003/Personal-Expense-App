@@ -19,11 +19,7 @@ const scanBill = async (req, res) => {
     const userId = req.userId;
     const imageBuffer = req.file.buffer;
 
-    console.log('Processing bill scan for user:', userId);
-    console.log('File:', req.file.originalname, 'Size:', req.file.size);
-
     // Step 1: Upload image to Cloudinary
-    console.log('Uploading to Cloudinary...');
     let cloudinaryResult;
     try {
       cloudinaryResult = await new Promise((resolve, reject) => {
@@ -43,14 +39,7 @@ const scanBill = async (req, res) => {
         );
         uploadStream.end(imageBuffer);
       });
-      console.log('Cloudinary upload successful:', cloudinaryResult.secure_url);
     } catch (cloudinaryError) {
-      console.error('Cloudinary upload failed:', cloudinaryError);
-      console.error('Cloudinary config used:', {
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY ? '***' + process.env.CLOUDINARY_API_KEY.slice(-4) : 'missing',
-        api_secret: process.env.CLOUDINARY_API_SECRET ? '***' + process.env.CLOUDINARY_API_SECRET.slice(-4) : 'missing',
-      });
       return res.status(500).json({
         success: false,
         message: 'Failed to upload image. Please check your Cloudinary credentials.',
@@ -59,13 +48,10 @@ const scanBill = async (req, res) => {
     }
 
     // Step 2: Process bill image with OCR and AI
-    console.log('Processing bill with AI...');
     let parsedBill;
     try {
       parsedBill = await processBillImage(imageBuffer);
-      console.log('Bill parsed successfully:', parsedBill);
     } catch (aiError) {
-      console.error('AI parsing failed:', aiError);
       // Delete uploaded image if parsing fails
       await cloudinary.uploader.destroy(cloudinaryResult.public_id);
       return res.status(500).json({
@@ -130,6 +116,7 @@ const scanBill = async (req, res) => {
     }
 
     // Step 4: Create and save expense
+    // Step 4: Create and save expense
     const expenseData = {
       user: userId,
       amount: amount,
@@ -139,8 +126,6 @@ const scanBill = async (req, res) => {
       billImage: cloudinaryResult.secure_url,
       billUrl: cloudinaryResult.secure_url,
     };
-
-    console.log('Saving expense:', expenseData);
 
     const expense = new Expense(expenseData);
     await expense.save();
@@ -170,7 +155,6 @@ const scanBill = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Scan bill error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error while processing bill',
@@ -212,7 +196,6 @@ const previewBillScan = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Preview bill error:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to preview bill',

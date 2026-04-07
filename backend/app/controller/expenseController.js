@@ -62,7 +62,6 @@ exports.addExpense = async (req, res) => {
     const expense = await Expense.create(expenseData);
     res.status(201).json(expense);
   } catch (error) {
-    console.error("❌ ADD EXPENSE ERROR:", error.message);
     res.status(500).json({ message: error.message || "Failed to add expense" });
   }
 };
@@ -74,8 +73,6 @@ exports.getExpenses = async (req, res) => {
   try {
     const { search = "", category = "" } = req.query;
     const filter = { user: req.userId };
-
-    console.log("🔵 [GET EXPENSES] userId:", req.userId, "search:", search, "category:", category);
 
     if (search) {
       // text search on description or category or date?
@@ -89,15 +86,9 @@ exports.getExpenses = async (req, res) => {
       filter.category = { $regex: category, $options: "i" };
     }
 
-    console.log("   🔍 Query filter:", JSON.stringify(filter));
-
     const expenses = await Expense.find(filter).sort({ date: -1 });
-
-    console.log("   ✅ Found expenses:", expenses.length);
-
     res.json(expenses);
   } catch (error) {
-    console.error("❌ GET EXPENSES ERROR:", error.message);
     res.status(500).json({ message: "Failed to fetch expenses" });
   }
 };
@@ -120,7 +111,6 @@ exports.deleteExpense = async (req, res) => {
 
     res.json({ message: "Expense deleted" });
   } catch (error) {
-    console.error("DELETE ERROR:", error);
     res.status(500).json({ message: "Failed to delete expense" });
   }
 };
@@ -150,7 +140,6 @@ exports.updateExpense = async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    console.error("UPDATE ERROR:", error);
     res.status(500).json({ message: "Failed to update expense" });
   }
 };
@@ -172,7 +161,8 @@ exports.getDashboard = async (req, res) => {
       1
     );
 
-    const result = await Expense.aggregate([
+    // Get Monthly Spent
+    const monthlyResult = await Expense.aggregate([
       {
         $match: {
           user: new mongoose.Types.ObjectId(req.userId),
@@ -187,7 +177,7 @@ exports.getDashboard = async (req, res) => {
       },
     ]);
 
-    const totalSpent = result[0]?.total || 0;
+    const totalSpent = monthlyResult[0]?.total || 0;
     const monthlyLimit = user.monthlyLimit || 0;
     const remaining = monthlyLimit - totalSpent;
 
@@ -199,11 +189,10 @@ exports.getDashboard = async (req, res) => {
     res.json({
       monthlyLimit,
       totalSpent,
-      remaining,
+      remaining: remaining > 0 ? remaining : 0,
       percentageUsed,
     });
   } catch (error) {
-    console.error("DASHBOARD ERROR:", error);
     res.status(500).json({ message: "Failed to fetch dashboard data" });
   }
 };

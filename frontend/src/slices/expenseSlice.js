@@ -102,7 +102,6 @@ const expenseSlice = createSlice({
       })
       .addCase(createExpense.fulfilled, (state, action) => {
         state.loading = false;
-        state.expenses.unshift(action.payload);
         state.error = null;
       })
       .addCase(createExpense.rejected, (state, action) => {
@@ -143,9 +142,6 @@ const expenseSlice = createSlice({
       // Monthly limit update
       .addCase(updateMonthlyLimit.fulfilled, (state, action) => {
         state.monthlyLimit = action.payload.monthlyLimit;
-        // recalc remaining/percentage
-        state.remaining = state.monthlyLimit - state.totalSpent;
-        state.percentageUsed = state.monthlyLimit > 0 ? Number(((state.totalSpent / state.monthlyLimit) * 100).toFixed(2)) : 0;
       })
       .addCase(updateMonthlyLimit.rejected, (state, action) => {
         state.error = action.error.message || "Failed to update monthly limit";

@@ -31,8 +31,10 @@ const AdvancedCharts = () => {
     const category = exp.category || 'Uncategorized';
     categoryData[category] = (categoryData[category] || 0) + exp.amount;
 
-    const month = new Date(exp.createdAt).toLocaleString("default", {
+    const expDate = exp.date ? new Date(exp.date) : new Date(exp.createdAt);
+    const month = expDate.toLocaleString("default", {
       month: "short",
+      year: "numeric"
     });
 
     monthlyData[month] = (monthlyData[month] || 0) + exp.amount;
