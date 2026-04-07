@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://personal-expense-app.onrender.com",
+      process.env.FRONTEND_URL,
     ],
     credentials: true,
   })
