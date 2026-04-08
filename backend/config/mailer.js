@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const axios = require("axios");
 
 const normalize = (value) => (typeof value === "string" ? value.trim() : value);
 
@@ -7,6 +8,7 @@ const smtpPass = normalize(process.env.SMTP_PASS) || normalize(process.env.EMAIL
 const smtpHost = normalize(process.env.SMTP_HOST);
 const smtpPort = Number(process.env.SMTP_PORT || 587);
 const smtpSecure = process.env.SMTP_SECURE === "true" || smtpPort === 465;
+const brevoApiKey = normalize(process.env.BREVO_API_KEY);
 
 const buildTransport = (config) =>
   nodemailer.createTransport({
@@ -55,9 +57,43 @@ if (smtpHost) {
   );
 }
 
+const sendViaBrevoApi = async (mailOptions) => {
+  if (!brevoApiKey) {
+    return null;
+  }
+
+  const fromEmail =
+    normalize(process.env.MAIL_FROM) ||
+    smtpUser ||
+    "no-reply@example.com";
+
+  const payload = {
+    sender: {
+      email: fromEmail,
+      name: "Expense App",
+    },
+    to: [{ email: mailOptions.to }],
+    subject: mailOptions.subject,
+    htmlContent: mailOptions.html,
+  };
+
+  return axios.post("https://api.brevo.com/v3/smtp/email", payload, {
+    headers: {
+      "api-key": brevoApiKey,
+      "Content-Type": "application/json",
+    },
+    timeout: Number(process.env.BREVO_TIMEOUT || 15000),
+  });
+};
+
 const logTransportStatus = async () => {
+  if (brevoApiKey) {
+    console.log("Mailer configured with Brevo API");
+    return;
+  }
+
   if (!smtpUser || !smtpPass) {
-    console.error("Mailer is not configured. Set EMAIL_USER and EMAIL_PASS or SMTP_USER and SMTP_PASS.");
+    console.error("Mailer is not configured. Set BREVO_API_KEY or SMTP/EMAIL credentials.");
     return;
   }
 
@@ -75,6 +111,22 @@ const logTransportStatus = async () => {
 };
 
 const sendMailWithFallback = async (mailOptions) => {
+  if (brevoApiKey) {
+    try {
+      await sendViaBrevoApi(mailOptions);
+      return { provider: "brevo" };
+    } catch (error) {
+      console.error("Brevo send failed:", {
+        message: error.response?.data?.message || error.message,
+        code: error.code,
+      });
+
+      if (!smtpUser || !smtpPass) {
+        throw error;
+      }
+    }
+  }
+
   if (!smtpUser || !smtpPass) {
     throw new Error("Email service is not configured on server");
   }

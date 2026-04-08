@@ -17,6 +17,7 @@ exports.sendOtp = async (req, res) => {
     const { name, email } = req.body;
     const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
     const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").trim();
+    const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -29,7 +30,7 @@ exports.sendOtp = async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address" });
     }
 
-    if (!smtpUser || !smtpPass) {
+    if (!brevoApiKey && (!smtpUser || !smtpPass)) {
       return res.status(500).json({
         message: "Email service is not configured on server",
       });
@@ -52,7 +53,7 @@ exports.sendOtp = async (req, res) => {
     await user.save();
 
     await sendMailWithFallback({
-      from: process.env.MAIL_FROM || smtpUser,
+      from: process.env.MAIL_FROM || smtpUser || "no-reply@example.com",
       to: normalizedEmail,
       subject: "Expense App - OTP Verification",
       html: `
