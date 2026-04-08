@@ -18,6 +18,7 @@ exports.sendOtp = async (req, res) => {
     const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
     const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").trim();
     const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
+    const isDemoMode = process.env.OTP_DEMO_MODE === "true";
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -31,9 +32,11 @@ exports.sendOtp = async (req, res) => {
     }
 
     if (!brevoApiKey && (!smtpUser || !smtpPass)) {
-      return res.status(500).json({
-        message: "Email service is not configured on server",
-      });
+      if (!isDemoMode) {
+        return res.status(500).json({
+          message: "Email service is not configured on server",
+        });
+      }
     }
 
     let user = await User.findOne({ email: normalizedEmail });
@@ -52,19 +55,33 @@ exports.sendOtp = async (req, res) => {
 
     await user.save();
 
-    await sendMailWithFallback({
-      from: process.env.MAIL_FROM || smtpUser || "no-reply@example.com",
-      to: normalizedEmail,
-      subject: "Expense App - OTP Verification",
-      html: `
-        <h2>Your OTP Code</h2>
-        <p>Your OTP is: <b>${otp}</b></p>
-        <p>This OTP will expire in 5 minutes.</p>
-      `,
-    });
+    try {
+      await sendMailWithFallback({
+        from: process.env.MAIL_FROM || smtpUser || "no-reply@example.com",
+        to: normalizedEmail,
+        subject: "Expense App - OTP Verification",
+        html: `
+          <h2>Your OTP Code</h2>
+          <p>Your OTP is: <b>${otp}</b></p>
+          <p>This OTP will expire in 5 minutes.</p>
+        `,
+      });
 
-    console.log(`[OTP] Successfully sent to: ${normalizedEmail}`);
-    res.json({ message: "OTP sent successfully" });
+      console.log(`[OTP] Successfully sent to: ${normalizedEmail}`);
+      res.json({ message: "OTP sent successfully" });
+    } catch (mailError) {
+      if (isDemoMode) {
+        console.log(`[OTP DEMO] OTP code ${otp} for ${normalizedEmail} (email send failed, demo mode enabled)`);
+        res.json({
+          message: "OTP sent successfully",
+          demo: true,
+          otp: otp,
+          note: "Demo mode: OTP displayed in response for testing",
+        });
+        return;
+      }
+      throw mailError;
+    }
   } catch (error) {
     console.error("Send OTP error:", {
       message: error.message,

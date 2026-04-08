@@ -36,8 +36,13 @@ const OtpAuth = () => {
 
     setLoading(true);
     try {
-      await axiosInstance.post("/users/send-otp", { email });
-      toast.success("OTP Sent!");
+      const { data } = await axiosInstance.post("/users/send-otp", { email });
+      if (data.demo) {
+        toast.info(`Demo Mode: Your OTP is ${data.otp}`);
+        setOtp(data.otp);
+      } else {
+        toast.success("OTP Sent!");
+      }
       setStep(2);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to send OTP");
