@@ -14,30 +14,41 @@ const app = express();
 
 configureDB();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  ...(process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      process.env.FRONTEND_URL,
-    ],
+    origin: (origin, callback) => {
+      // Allow requests from tools/server-to-server where Origin may be absent.
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Health Check & Debug Route (only for non-production ideally, but for now helpful)
+// Health check route for deployment monitoring.
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
     db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
     port: process.env.PORT,
-    // Add non-sensitive env checks
-    env_loaded: {
-      EMAIL: !!process.env.EMAIL_USER,
-      MONGO: !!process.env.MONGO_URI,
-      FRONTEND: !!process.env.FRONTEND_URL
-    }
+    uptimeSeconds: Math.floor(process.uptime()),
   });
 });
 

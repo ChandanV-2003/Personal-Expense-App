@@ -21,6 +21,17 @@ exports.sendOtp = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: "Please enter a valid email address" });
+    }
+
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(500).json({
+        message: "Email service is not configured on server",
+      });
+    }
 
     let user = await User.findOne({ email: normalizedEmail });
 
@@ -39,7 +50,7 @@ exports.sendOtp = async (req, res) => {
     await user.save();
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.MAIL_FROM || process.env.EMAIL_USER,
       to: normalizedEmail,
       subject: "Expense App - OTP Verification",
       html: `
@@ -49,17 +60,22 @@ exports.sendOtp = async (req, res) => {
       `,
     });
 
-    console.log(`✅ [OTP] Successfully sent to: ${normalizedEmail}`);
+    console.log(`[OTP] Successfully sent to: ${normalizedEmail}`);
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
-    console.error("❌ Send OTP Error Detail:", {
+    console.error("Send OTP error:", {
       message: error.message,
       code: error.code,
-      stack: error.stack
+      command: error.command,
     });
-    res.status(500).json({ 
-      message: "Failed to send OTP. Please check server logs for details.", 
-      error: error.message 
+
+    const deliveryErrorCodes = ["ETIMEDOUT", "EAUTH", "EENVELOPE", "ECONNECTION"];
+    const isDeliveryError = deliveryErrorCodes.includes(error.code);
+
+    res.status(500).json({
+      message: isDeliveryError
+        ? "Failed to send OTP email. Please verify SMTP settings and try again."
+        : "Failed to send OTP",
     });
   }
 };
@@ -114,10 +130,9 @@ exports.verifyOtp = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Verify OTP Error:", error);
-    res.status(500).json({ 
+    console.error("Verify OTP error:", error.message);
+    res.status(500).json({
       message: "Something went wrong",
-      error: error.message
     });
   }
 };
@@ -154,4 +169,4 @@ exports.updateMonthlyLimit = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Failed to update monthly limit" });
   }
-};
+};

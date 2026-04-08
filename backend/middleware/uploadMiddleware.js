@@ -1,5 +1,4 @@
 const multer = require('multer');
-const path = require('path');
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
