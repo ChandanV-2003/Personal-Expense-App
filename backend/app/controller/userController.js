@@ -15,6 +15,8 @@ const generateOTP = () => {
 exports.sendOtp = async (req, res) => {
   try {
     const { name, email } = req.body;
+    const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
+    const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").trim();
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -27,7 +29,7 @@ exports.sendOtp = async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address" });
     }
 
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!smtpUser || !smtpPass) {
       return res.status(500).json({
         message: "Email service is not configured on server",
       });
@@ -50,7 +52,7 @@ exports.sendOtp = async (req, res) => {
     await user.save();
 
     await transporter.sendMail({
-      from: process.env.MAIL_FROM || process.env.EMAIL_USER,
+      from: process.env.MAIL_FROM || smtpUser,
       to: normalizedEmail,
       subject: "Expense App - OTP Verification",
       html: `

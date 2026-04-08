@@ -1,6 +1,10 @@
 const nodemailer = require("nodemailer");
 
-const hasEmailCredentials = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+const normalize = (value) => (typeof value === "string" ? value.trim() : value);
+
+const smtpUser = normalize(process.env.SMTP_USER) || normalize(process.env.EMAIL_USER);
+const smtpPass = normalize(process.env.SMTP_PASS) || normalize(process.env.EMAIL_PASS);
+const hasEmailCredentials = Boolean(smtpUser && smtpPass);
 const smtpPort = Number(process.env.SMTP_PORT || 587);
 
 const transportConfig = process.env.SMTP_HOST
@@ -9,15 +13,15 @@ const transportConfig = process.env.SMTP_HOST
       port: smtpPort,
       secure: process.env.SMTP_SECURE === "true" || smtpPort === 465,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     }
   : {
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     };
 
