@@ -1,5 +1,5 @@
 const User = require("../model/user");
-const transporter = require("../../config/mailer");
+const { sendMailWithFallback } = require("../../config/mailer");
 const jwt = require("jsonwebtoken");
 
 /* =========================
@@ -51,7 +51,7 @@ exports.sendOtp = async (req, res) => {
 
     await user.save();
 
-    await transporter.sendMail({
+    await sendMailWithFallback({
       from: process.env.MAIL_FROM || smtpUser,
       to: normalizedEmail,
       subject: "Expense App - OTP Verification",
@@ -71,7 +71,7 @@ exports.sendOtp = async (req, res) => {
       command: error.command,
     });
 
-    const deliveryErrorCodes = ["ETIMEDOUT", "EAUTH", "EENVELOPE", "ECONNECTION"];
+    const deliveryErrorCodes = ["ETIMEDOUT", "EAUTH", "EENVELOPE", "ECONNECTION", "ESOCKET", "ECONNRESET"];
     const isDeliveryError = deliveryErrorCodes.includes(error.code);
 
     res.status(500).json({
